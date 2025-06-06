@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <title>Berlin Bezirksregionen Karte</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet" />
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([52.52, 13.405], 11);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        let selectedLayer;
+
+        fetch('https://camino-werkstatt.limequery.com/upload/surveys/286556/files/BerlinBezirksregionenWGS84.txt')
+            .then(res => res.json())
+            .then(data => {
+                const geojson = L.geoJSON(data, {
+                    style: {
+                        color: "#0077cc",
+                        weight: 2,
+                        fillOpacity: 0.1
+                    },
+                    onEachFeature: function (feature, layer) {
+                        const name = feature.properties.BZR_NAME;
+
+                        layer.on('click', function () {
+                            if (selectedLayer) geojson.resetStyle(selectedLayer);
+                            this.setStyle({ color: '#cc0000', weight: 3, fillOpacity: 0.4 });
+                            selectedLayer = this;
+
+                            // Post message to parent (LimeSurvey iframe)
+                            window.parent.postMessage(name, "*");
+                        });
+
+                        layer.bindPopup(name);
+                    }
+                });
+                geojson.addTo(map);
+            })
+            .catch(err => {
+                console.error("GeoJSON load failed:", err);
+                alert("Karte konnte nicht geladen werden.");
+            });
+    </script>
+</body>
+</html>
